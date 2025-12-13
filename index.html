@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>Neon Laser Pinball</title>
   <link rel="icon" type="image/x-icon" href="https://github.com/TitanBusinessPros/Neon-Pinball/raw/main/Neon%20Pinball%20Favicon.png">
   <style>
@@ -16,6 +18,9 @@
       overflow: hidden;
       background: #000;
       font-family: 'Courier New', monospace;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     
     #gameCanvas {
@@ -25,40 +30,131 @@
     
     #ui {
       position: absolute;
-      top: 20px;
-      left: 20px;
+      top: 10px;
+      left: 10px;
       color: #0ff;
       text-shadow: 0 0 10px #0ff;
-      font-size: 18px;
+      font-size: 16px;
       z-index: 10;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 8px 12px;
+      border-radius: 8px;
+    }
+    
+    #levelDisplay {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #ff00ff;
+      text-shadow: 0 0 15px #ff00ff;
+      font-size: 20px;
+      font-weight: bold;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 8px 16px;
+      border-radius: 8px;
     }
     
     #controls {
       position: absolute;
-      top: 20px;
-      right: 20px;
+      top: 10px;
+      right: 10px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
       z-index: 10;
+    }
+    
+    /* Mobile touch controls */
+    #mobileControls {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 200px;
+      display: none;
+      z-index: 50;
+      pointer-events: none;
+    }
+    
+    .flipper-btn {
+      position: absolute;
+      bottom: 20px;
+      width: 35%;
+      height: 120px;
+      background: linear-gradient(45deg, rgba(255, 0, 255, 0.6), rgba(0, 255, 255, 0.6));
+      border: 3px solid rgba(255, 255, 255, 0.8);
+      border-radius: 15px;
+      color: #fff;
+      font-size: 18px;
+      font-weight: bold;
+      text-shadow: 0 0 10px #000;
+      box-shadow: 0 0 30px rgba(255, 0, 255, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: all;
+      touch-action: none;
+    }
+    
+    #mobileLeftFlipper {
+      left: 20px;
+    }
+    
+    #mobileRightFlipper {
+      right: 20px;
+    }
+    
+    .flipper-btn:active {
+      background: linear-gradient(45deg, rgba(255, 0, 255, 0.9), rgba(0, 255, 255, 0.9));
+      transform: scale(0.95);
+    }
+    
+    #mobileLaunchBtn {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(45deg, #ff00ff, #00ffff);
+      border: 3px solid #fff;
+      border-radius: 50%;
+      color: #fff;
+      font-size: 14px;
+      font-weight: bold;
+      text-shadow: 0 0 10px #000;
+      box-shadow: 0 0 30px rgba(255, 0, 255, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      z-index: 51;
+      pointer-events: all;
+      touch-action: none;
+    }
+    
+    #mobileLaunchBtn:active {
+      transform: scale(0.9);
     }
     
     button {
       background: linear-gradient(45deg, #ff00ff, #00ffff);
       border: 2px solid #fff;
       color: #fff;
-      padding: 10px 20px;
-      font-size: 14px;
+      padding: 8px 16px;
+      font-size: 12px;
       font-weight: bold;
       cursor: pointer;
-      border-radius: 10px;
+      border-radius: 8px;
       text-shadow: 0 0 5px #000;
       box-shadow: 0 0 20px rgba(255, 0, 255, 0.8);
       transition: all 0.3s;
+      touch-action: manipulation;
     }
     
     button:hover {
-      transform: scale(1.1);
+      transform: scale(1.05);
       box-shadow: 0 0 30px rgba(0, 255, 255, 1);
     }
     
@@ -83,20 +179,254 @@
     
     #musicToggle {
       position: absolute;
-      bottom: 20px;
-      left: 20px;
+      bottom: 10px;
+      left: 10px;
       background: linear-gradient(45deg, #00ff00, #00cc00);
       z-index: 10;
+      padding: 8px 12px;
+      font-size: 11px;
     }
     
     #audioStatus {
       position: absolute;
-      bottom: 60px;
-      left: 20px;
+      bottom: 50px;
+      left: 10px;
       color: #0ff;
       text-shadow: 0 0 10px #0ff;
-      font-size: 14px;
+      font-size: 11px;
       z-index: 10;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    
+    #winMessage {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      border: 3px solid #0ff;
+      padding: 40px;
+      border-radius: 20px;
+      color: #0ff;
+      text-shadow: 0 0 20px #0ff;
+      font-size: 32px;
+      font-weight: bold;
+      display: none;
+      z-index: 100;
+      box-shadow: 0 0 50px rgba(0, 255, 255, 0.8);
+    }
+    
+    #gameOverModal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: none;
+      z-index: 200;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    
+    #gameOverModal.show {
+      display: flex;
+    }
+    
+    .modal-content {
+      text-align: center;
+      color: #0ff;
+      text-shadow: 0 0 20px #0ff;
+      padding: 20px;
+      max-width: 90%;
+    }
+    
+    .modal-content h2 {
+      font-size: 36px;
+      margin-bottom: 15px;
+      color: #ff00ff;
+      text-shadow: 0 0 30px #ff00ff;
+    }
+    
+    .modal-content p {
+      font-size: 20px;
+      margin: 8px 0;
+    }
+    
+    .modal-buttons {
+      margin-top: 20px;
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    .modal-buttons button {
+      font-size: 16px;
+      padding: 12px 24px;
+    }
+    
+    #adModal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.98);
+      display: none;
+      z-index: 300;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    
+    #adModal.show {
+      display: flex;
+    }
+    
+    #adVideo {
+      max-width: 90%;
+      max-height: 60%;
+      width: 100%;
+      border: 3px solid #0ff;
+      box-shadow: 0 0 50px rgba(0, 255, 255, 0.8);
+    }
+    
+    #adSkipBtn {
+      margin-top: 15px;
+      display: none;
+      background: linear-gradient(45deg, #00ff00, #00cc00);
+      padding: 12px 30px;
+      font-size: 16px;
+    }
+    
+    #adTimer {
+      color: #fff;
+      font-size: 18px;
+      margin-top: 15px;
+      text-shadow: 0 0 10px #fff;
+    }
+    
+    /* Tablet and Mobile Responsive */
+    @media screen and (max-width: 1024px) {
+      #controls {
+        display: none;
+      }
+      
+      #mobileControls {
+        display: block;
+      }
+      
+      #ui {
+        font-size: 14px;
+        padding: 6px 10px;
+      }
+      
+      #levelDisplay {
+        font-size: 16px;
+        padding: 6px 12px;
+      }
+      
+      .modal-content h2 {
+        font-size: 28px;
+      }
+      
+      .modal-content p {
+        font-size: 16px;
+      }
+      
+      .modal-buttons button {
+        font-size: 14px;
+        padding: 10px 20px;
+      }
+    }
+    
+    @media screen and (max-width: 480px) {
+      #ui {
+        font-size: 12px;
+        padding: 5px 8px;
+        top: 5px;
+        left: 5px;
+      }
+      
+      #levelDisplay {
+        font-size: 14px;
+        padding: 5px 10px;
+        top: 5px;
+      }
+      
+      #musicToggle, #audioStatus {
+        font-size: 10px;
+        padding: 6px 10px;
+      }
+      
+      .flipper-btn {
+        width: 40%;
+        height: 100px;
+        font-size: 16px;
+        bottom: 10px;
+      }
+      
+      #mobileLeftFlipper {
+        left: 10px;
+      }
+      
+      #mobileRightFlipper {
+        right: 10px;
+      }
+      
+      #mobileLaunchBtn {
+        width: 80px;
+        height: 80px;
+        font-size: 12px;
+        bottom: 10px;
+        right: 10px;
+      }
+      
+      .modal-content h2 {
+        font-size: 24px;
+      }
+      
+      .modal-content p {
+        font-size: 14px;
+      }
+      
+      .modal-buttons {
+        flex-direction: column;
+        gap: 10px;
+      }
+      
+      .modal-buttons button {
+        font-size: 13px;
+        padding: 10px 15px;
+        width: 100%;
+      }
+    }
+    
+    .levelup {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 0, 255, 0.9);
+      border: 3px solid #ff00ff;
+      padding: 30px 50px;
+      border-radius: 20px;
+      color: #fff;
+      text-shadow: 0 0 20px #ff00ff;
+      font-size: 28px;
+      font-weight: bold;
+      z-index: 100;
+      box-shadow: 0 0 50px rgba(255, 0, 255, 0.8);
+      animation: pulse 0.5s ease-in-out;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.1); }
     }
   </style>
 </head>
@@ -107,7 +437,29 @@
     <div>POWER: <span id="power">0</span>%</div>
   </div>
   
-  <img id="logo" src="https://github.com/TitanBusinessPros/Neon-Pinball/raw/main/Neon%20Pinball%20Logo.png" alt="Neon Pinball Logo">
+  <div id="levelDisplay">LEVEL <span id="currentLevel">1</span> / 10</div>
+  
+  <div id="winMessage">🏆 YOU WIN! 🏆<br>ALL 10 LEVELS COMPLETE!</div>
+  
+  <div id="gameOverModal">
+    <div class="modal-content">
+      <h2>OUT OF BALLS!</h2>
+      <p>Score: <span id="finalScore">0</span></p>
+      <p>Level: <span id="finalLevel">1</span></p>
+      <div class="modal-buttons">
+        <button id="watchAdBtn">📺 WATCH AD<br>+10 BALLS</button>
+        <button id="restartFromOverBtn">🔄 RESTART GAME</button>
+      </div>
+    </div>
+  </div>
+  
+  <div id="adModal">
+    <video id="adVideo" autoplay>
+      <source src="https://github.com/TitanBusinessPros/Zombie-Outbreak-Honolulu/raw/main/Ad-2-Zombie.mp4" type="video/mp4">
+    </video>
+    <div id="adTimer">Watch ad to continue...</div>
+    <button id="adSkipBtn">✓ CLAIM 10 BALLS</button>
+  </div>
   
   <canvas id="gameCanvas"></canvas>
   
@@ -120,6 +472,14 @@
     <button id="rightFlipper">RIGHT FLIPPER (D)</button>
     <button id="restartBtn">RESTART (R)</button>
   </div>
+  
+  <!-- Mobile Touch Controls -->
+  <div id="mobileControls">
+    <div id="mobileLeftFlipper" class="flipper-btn">LEFT<br>FLIPPER</div>
+    <div id="mobileRightFlipper" class="flipper-btn">RIGHT<br>FLIPPER</div>
+  </div>
+  
+  <button id="mobileLaunchBtn">LAUNCH</button>
 
   <audio id="backgroundMusic" loop>
     <source src="https://github.com/TitanBusinessPros/Neon-Pinball/raw/main/Neon%20Pinball%20Theme%20Song.mp3" type="audio/mpeg">
@@ -145,33 +505,39 @@
       isCharging: false,
       gameActive: false,
       ball: null,
-      musicStarted: false
+      musicStarted: false,
+      currentLevel: 1,
+      maxLevel: 10,
+      levelThresholds: [5000, 10000, 20000, 40000, 80000, 160000, 320000, 640000, 1280000, 2560000]
     };
     
-    // Physics
-    const gravity = 0.6;
-    const friction = 0.995;
-    const bounceDamping = 0.8;
+    // Physics - REDUCED for better control
+    const gravity = 0.4;
+    const friction = 0.99;
+    const bounceDamping = 0.7;
+    const maxSpeed = 25; // Maximum ball speed to prevent tunneling
     
-    // Define the playfield boundaries explicitly
+    // Define the playfield boundaries - MORE RESTRICTIVE
     const boundaries = {
-      left: 50,
-      right: canvas.width - 100,
-      top: 10,
+      left: 100,
+      right: canvas.width - 150,
+      top: 20,
       bottom: canvas.height - 50,
-      flipperY: canvas.height - 80
+      flipperY: canvas.height - 100
     };
     
-    // Walls as line segments - make them thicker for better collision detection
+    // Create solid boundary walls - CRITICAL for keeping ball inside
     const walls = [
-      // Left wall - from top to start of angled section
-      { x1: boundaries.left, y1: 0, x2: boundaries.left, y2: canvas.height - 200 },
-      // Right wall - from top to start of angled section  
-      { x1: boundaries.right, y1: 0, x2: boundaries.right, y2: canvas.height - 200 },
-      // Bottom left angled wall
-      { x1: boundaries.left, y1: canvas.height - 200, x2: canvas.width * 0.35, y2: boundaries.bottom },
-      // Bottom right angled wall
-      { x1: boundaries.right, y1: canvas.height - 200, x2: canvas.width * 0.65, y2: boundaries.bottom }
+      // Left vertical wall (solid from top to angled section)
+      { x1: boundaries.left, y1: 0, x2: boundaries.left, y2: canvas.height - 200, type: 'vertical' },
+      // Right vertical wall (solid from top to angled section)
+      { x1: boundaries.right, y1: 0, x2: boundaries.right, y2: canvas.height - 200, type: 'vertical' },
+      // Top wall
+      { x1: boundaries.left, y1: boundaries.top, x2: boundaries.right, y2: boundaries.top, type: 'horizontal' },
+      // Bottom left angled wall (from left wall to left flipper area)
+      { x1: boundaries.left, y1: canvas.height - 200, x2: canvas.width * 0.35, y2: boundaries.bottom, type: 'angled' },
+      // Bottom right angled wall (from right wall to right flipper area)
+      { x1: boundaries.right, y1: canvas.height - 200, x2: canvas.width * 0.65, y2: boundaries.bottom, type: 'angled' }
     ];
     
     // Flippers
@@ -233,6 +599,19 @@
       });
     }
     
+    // Detect mobile/tablet
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 1024;
+    
+    // Show mobile launch button when needed
+    function updateMobileLaunchButton() {
+      const mobileLaunchBtn = document.getElementById('mobileLaunchBtn');
+      if (isMobile && !game.gameActive && game.ballsLeft > 0) {
+        mobileLaunchBtn.style.display = 'flex';
+      } else {
+        mobileLaunchBtn.style.display = 'none';
+      }
+    }
+    
     // Audio functions
     function startBackgroundMusic() {
       if (!game.musicStarted) {
@@ -268,6 +647,31 @@
     
     musicToggle.addEventListener('click', toggleMusic);
     
+    // Level management
+    function checkLevelUp() {
+      if (game.currentLevel <= game.maxLevel) {
+        const targetScore = game.levelThresholds[game.currentLevel - 1];
+        if (game.score >= targetScore && game.currentLevel < game.maxLevel) {
+          game.currentLevel++;
+          updateUI();
+          showLevelUpMessage();
+        } else if (game.score >= game.levelThresholds[game.maxLevel - 1] && game.currentLevel === game.maxLevel) {
+          // Won the game!
+          setTimeout(() => {
+            document.getElementById('winMessage').style.display = 'block';
+          }, 1000);
+        }
+      }
+    }
+    
+    function showLevelUpMessage() {
+      const msg = document.createElement('div');
+      msg.className = 'levelup';
+      msg.textContent = `LEVEL ${game.currentLevel}!`;
+      document.body.appendChild(msg);
+      setTimeout(() => msg.remove(), 1500);
+    }
+    
     class Ball {
       constructor(x, y) {
         this.x = x;
@@ -286,110 +690,118 @@
         this.vx *= friction;
         this.vy *= friction;
         
-        // Store previous position for collision detection
-        const prevX = this.x;
-        const prevY = this.y;
+        // CRITICAL: Limit maximum speed to prevent tunneling
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (speed > maxSpeed) {
+          const ratio = maxSpeed / speed;
+          this.vx *= ratio;
+          this.vy *= ratio;
+        }
         
-        this.x += this.vx;
-        this.y += this.vy;
+        // Move ball in small steps to prevent tunneling
+        const steps = Math.ceil(speed / 5);
+        const stepVX = this.vx / steps;
+        const stepVY = this.vy / steps;
+        
+        for (let step = 0; step < steps; step++) {
+          this.x += stepVX;
+          this.y += stepVY;
+          
+          // IMMEDIATE boundary enforcement after each micro-step
+          const thick = 15; // Thick boundary margin
+          
+          // Left wall
+          if (this.x < boundaries.left + this.radius + thick) {
+            this.x = boundaries.left + this.radius + thick;
+            this.vx = Math.abs(this.vx) * bounceDamping;
+            createParticles(this.x, this.y, '#0ff');
+          }
+          
+          // Right wall
+          if (this.x > boundaries.right - this.radius - thick) {
+            this.x = boundaries.right - this.radius - thick;
+            this.vx = -Math.abs(this.vx) * bounceDamping;
+            createParticles(this.x, this.y, '#0ff');
+          }
+          
+          // Top wall
+          if (this.y < boundaries.top + this.radius + thick) {
+            this.y = boundaries.top + this.radius + thick;
+            this.vy = Math.abs(this.vy) * bounceDamping;
+            createParticles(this.x, this.y, '#0ff');
+          }
+          
+          // Check angled walls
+          this.checkAngledWalls();
+        }
         
         // Trail
         this.trail.push({ x: this.x, y: this.y });
         if (this.trail.length > 15) this.trail.shift();
         
-        // Check collisions in order - SIMPLIFIED COLLISION DETECTION
-        this.checkSimpleWallCollisions();
         this.checkBumperCollisions();
         this.checkFlipperCollision(flippers.left);
         this.checkFlipperCollision(flippers.right);
         
-        // Check if ball is lost (only through the middle gap)
+        // Check if ball is lost
         this.checkBallLoss();
       }
       
-      checkSimpleWallCollisions() {
-        // SIMPLIFIED COLLISION - Just check boundaries directly
-        const leftBound = boundaries.left + this.radius;
-        const rightBound = boundaries.right - this.radius;
-        const topBound = boundaries.top + this.radius;
-        
-        // Left wall collision - ALWAYS ACTIVE
-        if (this.x < leftBound) {
-          this.x = leftBound;
-          this.vx = Math.abs(this.vx) * bounceDamping;
-        }
-        
-        // Right wall collision - ALWAYS ACTIVE
-        if (this.x > rightBound) {
-          this.x = rightBound;
-          this.vx = -Math.abs(this.vx) * bounceDamping;
-        }
-        
-        // Top wall collision
-        if (this.y < topBound) {
-          this.y = topBound;
-          this.vy = Math.abs(this.vy) * bounceDamping;
-        }
-        
-        // Check angled walls with simple line collision
-        for (let i = 2; i < walls.length; i++) {
-          this.checkSimpleLineCollision(walls[i]);
-        }
-      }
-      
-      checkSimpleLineCollision(wall) {
-        // Simple line collision without complex math
-        const wallVecX = wall.x2 - wall.x1;
-        const wallVecY = wall.y2 - wall.y1;
-        const wallLength = Math.sqrt(wallVecX * wallVecX + wallVecY * wallVecY);
-        
-        // Normalize wall vector
-        const wallNormX = wallVecX / wallLength;
-        const wallNormY = wallVecY / wallLength;
-        
-        // Vector from wall start to ball
-        const toBallX = this.x - wall.x1;
-        const toBallY = this.y - wall.y1;
-        
-        // Project ball position onto wall
-        const projection = toBallX * wallNormX + toBallY * wallNormY;
-        
-        // Clamp projection to wall segment
-        const clampedProjection = Math.max(0, Math.min(wallLength, projection));
-        
-        // Find closest point on wall to ball
-        const closestX = wall.x1 + clampedProjection * wallNormX;
-        const closestY = wall.y1 + clampedProjection * wallNormY;
-        
-        // Distance to closest point
-        const distX = this.x - closestX;
-        const distY = this.y - closestY;
-        const distance = Math.sqrt(distX * distX + distY * distY);
-        
-        // If collision
-        if (distance < this.radius) {
-          // Calculate normal (perpendicular to wall)
-          let normalX = -wallNormY;
-          let normalY = wallNormX;
+      checkAngledWalls() {
+        // Only check the angled bottom walls (last 2 walls in array)
+        for (let i = 3; i < walls.length; i++) {
+          const wall = walls[i];
           
-          // Ensure normal points toward ball
-          const dot = distX * normalX + distY * normalY;
-          if (dot > 0) {
-            normalX = -normalX;
-            normalY = -normalY;
+          // Vector from wall start to end
+          const wallDX = wall.x2 - wall.x1;
+          const wallDY = wall.y2 - wall.y1;
+          const wallLength = Math.sqrt(wallDX * wallDX + wallDY * wallDY);
+          
+          if (wallLength === 0) continue;
+          
+          // Normalized wall direction
+          const wallNX = wallDX / wallLength;
+          const wallNY = wallDY / wallLength;
+          
+          // Vector from wall start to ball
+          const ballDX = this.x - wall.x1;
+          const ballDY = this.y - wall.y1;
+          
+          // Project ball onto wall line
+          const projection = ballDX * wallNX + ballDY * wallNY;
+          const clampedProj = Math.max(0, Math.min(wallLength, projection));
+          
+          // Closest point on wall to ball
+          const closestX = wall.x1 + clampedProj * wallNX;
+          const closestY = wall.y1 + clampedProj * wallNY;
+          
+          // Distance from ball to closest point
+          const distX = this.x - closestX;
+          const distY = this.y - closestY;
+          const distance = Math.sqrt(distX * distX + distY * distY);
+          
+          // Collision with extra safety margin
+          const safetyMargin = 8;
+          if (distance < this.radius + safetyMargin) {
+            // Normal pointing from wall to ball
+            let normalX = distX / (distance || 1);
+            let normalY = distY / (distance || 1);
+            
+            // Push ball away from wall aggressively
+            const overlap = (this.radius + safetyMargin) - distance;
+            this.x += normalX * (overlap + 2);
+            this.y += normalY * (overlap + 2);
+            
+            // Reflect velocity
+            const dotProduct = this.vx * normalX + this.vy * normalY;
+            if (dotProduct < 0) {
+              this.vx -= 2 * dotProduct * normalX;
+              this.vy -= 2 * dotProduct * normalY;
+              this.vx *= bounceDamping;
+              this.vy *= bounceDamping;
+              createParticles(closestX, closestY, '#0ff');
+            }
           }
-          
-          // Push ball out of wall
-          const overlap = this.radius - distance;
-          this.x += normalX * overlap;
-          this.y += normalY * overlap;
-          
-          // Reflect velocity
-          const dotProduct = this.vx * normalX + this.vy * normalY;
-          this.vx -= 2 * dotProduct * normalX * bounceDamping;
-          this.vy -= 2 * dotProduct * normalY * bounceDamping;
-          
-          createParticles(this.x, this.y, '#0ff');
         }
       }
       
@@ -404,8 +816,8 @@
             const overlap = this.radius + bumper.radius - dist;
             
             // Push ball away from bumper
-            this.x += Math.cos(angle) * overlap;
-            this.y += Math.sin(angle) * overlap;
+            this.x += Math.cos(angle) * (overlap + 1);
+            this.y += Math.sin(angle) * (overlap + 1);
             
             // Apply velocity
             const force = 25;
@@ -413,6 +825,7 @@
             this.vy = Math.sin(angle) * force;
             
             game.score += 100;
+            checkLevelUp();
             updateUI();
             bumper.hit = true;
             setTimeout(() => bumper.hit = false, 100);
@@ -440,6 +853,7 @@
           this.y = flipper.y - this.radius - 5;
           
           game.score += 10;
+          checkLevelUp();
           updateUI();
           createParticles(this.x, this.y, '#fff');
         }
@@ -459,7 +873,7 @@
           game.ballsLeft--;
           updateUI();
           if (game.ballsLeft === 0) {
-            setTimeout(() => alert(`Game Over! Final Score: ${game.score}`), 100);
+            showGameOver();
           }
         }
       }
@@ -572,7 +986,7 @@
     
     function drawWalls() {
       ctx.strokeStyle = '#0ff';
-      ctx.lineWidth = 8; // Thicker walls for better visual
+      ctx.lineWidth = 8;
       ctx.shadowBlur = 15;
       ctx.shadowColor = '#0ff';
       walls.forEach(wall => {
@@ -643,7 +1057,7 @@
     }
     
     function drawLauncher() {
-      const launcherX = canvas.width - 50;
+      const launcherX = boundaries.right + 30;
       const launcherY = canvas.height - 200;
       
       ctx.fillStyle = '#222';
@@ -667,6 +1081,8 @@
       document.getElementById('score').textContent = game.score;
       document.getElementById('ballsLeft').textContent = game.ballsLeft;
       document.getElementById('power').textContent = Math.floor(game.launchPower);
+      document.getElementById('currentLevel').textContent = game.currentLevel;
+      updateMobileLaunchButton();
     }
     
     function gameLoop() {
@@ -721,15 +1137,68 @@
       }
       
       if (game.isCharging && !game.gameActive && game.ballsLeft > 0 && game.launchPower > 0) {
-        game.ball = new Ball(canvas.width - 50, canvas.height - 220);
-        game.ball.vy = -(game.launchPower / 100) * 35 - 10;
-        game.ball.vx = -8;
+        const launcherX = boundaries.right + 30;
+        game.ball = new Ball(launcherX, canvas.height - 220);
+        game.ball.vy = -(game.launchPower / 100) * 30 - 8;
+        game.ball.vx = -6;
         game.gameActive = true;
       }
       
       game.isCharging = false;
       game.launchPower = 0;
       updateUI();
+    }
+    
+    function showGameOver() {
+      document.getElementById('finalScore').textContent = game.score;
+      document.getElementById('finalLevel').textContent = game.currentLevel;
+      document.getElementById('gameOverModal').classList.add('show');
+    }
+    
+    function hideGameOver() {
+      document.getElementById('gameOverModal').classList.remove('show');
+    }
+    
+    function showAdModal() {
+      const adModal = document.getElementById('adModal');
+      const adVideo = document.getElementById('adVideo');
+      const adSkipBtn = document.getElementById('adSkipBtn');
+      const adTimer = document.getElementById('adTimer');
+      
+      hideGameOver();
+      adModal.classList.add('show');
+      adSkipBtn.style.display = 'none';
+      
+      // Reset and play video
+      adVideo.currentTime = 0;
+      adVideo.play();
+      
+      let timeLeft = 5;
+      adTimer.textContent = `Watch ad to continue... ${timeLeft}s`;
+      
+      const countdown = setInterval(() => {
+        timeLeft--;
+        if (timeLeft > 0) {
+          adTimer.textContent = `Watch ad to continue... ${timeLeft}s`;
+        } else {
+          clearInterval(countdown);
+          adTimer.textContent = 'Ad complete!';
+          adSkipBtn.style.display = 'block';
+        }
+      }, 1000);
+      
+      // Handle video end
+      adVideo.onended = () => {
+        clearInterval(countdown);
+        adTimer.textContent = 'Ad complete!';
+        adSkipBtn.style.display = 'block';
+      };
+    }
+    
+    function claimBallsFromAd() {
+      game.ballsLeft += 10;
+      updateUI();
+      document.getElementById('adModal').classList.remove('show');
     }
     
     function restartGame() {
@@ -739,7 +1208,10 @@
       game.isCharging = false;
       game.gameActive = false;
       game.ball = null;
+      game.currentLevel = 1;
       particles.length = 0;
+      document.getElementById('winMessage').style.display = 'none';
+      hideGameOver();
       updateUI();
     }
     
@@ -766,6 +1238,51 @@
     });
     
     document.getElementById('restartBtn').addEventListener('click', restartGame);
+    
+    // Mobile touch controls
+    const mobileLeftFlipper = document.getElementById('mobileLeftFlipper');
+    const mobileRightFlipper = document.getElementById('mobileRightFlipper');
+    const mobileLaunchBtn = document.getElementById('mobileLaunchBtn');
+    
+    // Left flipper touch
+    mobileLeftFlipper.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      flippers.left.rotating = true;
+      flippers.left.target = 0.5;
+    });
+    
+    mobileLeftFlipper.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      flippers.left.rotating = false;
+    });
+    
+    // Right flipper touch
+    mobileRightFlipper.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      flippers.right.rotating = true;
+      flippers.right.target = -0.5;
+    });
+    
+    mobileRightFlipper.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      flippers.right.rotating = false;
+    });
+    
+    // Mobile launch button
+    mobileLaunchBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      startCharging();
+    });
+    
+    mobileLaunchBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      releaseLaunch();
+    });
+    
+    // Game over modal buttons
+    document.getElementById('watchAdBtn').addEventListener('click', showAdModal);
+    document.getElementById('restartFromOverBtn').addEventListener('click', restartGame);
+    document.getElementById('adSkipBtn').addEventListener('click', claimBallsFromAd);
     
     // Keyboard
     document.addEventListener('keydown', (e) => {
@@ -803,6 +1320,33 @@
     });
     
     updateUI();
+    
+    // Handle window resize for mobile orientation changes
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      
+      // Update boundaries based on new canvas size
+      boundaries.right = canvas.width - 150;
+      boundaries.bottom = canvas.height - 50;
+      boundaries.flipperY = canvas.height - 100;
+      
+      // Update flipper positions
+      flippers.left.x = canvas.width * 0.37;
+      flippers.left.y = boundaries.flipperY;
+      flippers.right.x = canvas.width * 0.63;
+      flippers.right.y = boundaries.flipperY;
+      
+      // Update wall positions
+      walls[1].x1 = boundaries.right;
+      walls[1].x2 = boundaries.right;
+      walls[2].x2 = canvas.width * 0.35;
+      walls[2].y2 = boundaries.bottom;
+      walls[3].x1 = boundaries.right;
+      walls[3].x2 = canvas.width * 0.65;
+      walls[3].y2 = boundaries.bottom;
+    });
+    
     gameLoop();
   </script>
 </body>
