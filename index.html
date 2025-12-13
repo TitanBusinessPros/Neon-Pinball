@@ -21,11 +21,29 @@
       touch-action: none;
       -webkit-user-select: none;
       user-select: none;
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      position: fixed;
+      overscroll-behavior: none;
+    }
+    
+    html {
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      position: fixed;
     }
     
     #gameCanvas {
       display: block;
       background: radial-gradient(circle at 50% 50%, #1a0033, #000);
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
     }
     
     #ui {
@@ -68,7 +86,7 @@
     
     /* Mobile touch controls */
     #mobileControls {
-      position: absolute;
+      position: fixed;
       bottom: 0;
       left: 0;
       width: 100%;
@@ -79,12 +97,13 @@
     }
     
     .flipper-btn {
-      position: absolute;
+      position: fixed;
       bottom: 20px;
       width: 35%;
+      max-width: 200px;
       height: 120px;
-      background: linear-gradient(45deg, rgba(255, 0, 255, 0.6), rgba(0, 255, 255, 0.6));
-      border: 3px solid rgba(255, 255, 255, 0.8);
+      background: linear-gradient(45deg, rgba(255, 0, 255, 0.8), rgba(0, 255, 255, 0.8));
+      border: 3px solid rgba(255, 255, 255, 0.9);
       border-radius: 15px;
       color: #fff;
       font-size: 18px;
@@ -96,25 +115,27 @@
       justify-content: center;
       pointer-events: all;
       touch-action: none;
+      z-index: 100;
     }
     
     #mobileLeftFlipper {
-      left: 20px;
+      left: 10px;
     }
     
     #mobileRightFlipper {
-      right: 20px;
+      right: 10px;
     }
     
     .flipper-btn:active {
-      background: linear-gradient(45deg, rgba(255, 0, 255, 0.9), rgba(0, 255, 255, 0.9));
+      background: linear-gradient(45deg, rgba(255, 0, 255, 1), rgba(0, 255, 255, 1));
       transform: scale(0.95);
     }
     
     #mobileLaunchBtn {
-      position: absolute;
-      bottom: 20px;
-      right: 20px;
+      position: fixed;
+      bottom: 150px;
+      left: 50%;
+      transform: translateX(-50%);
       width: 100px;
       height: 100px;
       background: linear-gradient(45deg, #ff00ff, #00ffff);
@@ -129,13 +150,13 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      z-index: 51;
+      z-index: 101;
       pointer-events: all;
       touch-action: none;
     }
     
     #mobileLaunchBtn:active {
-      transform: scale(0.9);
+      transform: translateX(-50%) scale(0.9);
     }
     
     button {
@@ -346,44 +367,44 @@
     
     @media screen and (max-width: 480px) {
       #ui {
-        font-size: 12px;
-        padding: 5px 8px;
+        font-size: 11px;
+        padding: 4px 8px;
         top: 5px;
         left: 5px;
       }
       
       #levelDisplay {
-        font-size: 14px;
-        padding: 5px 10px;
+        font-size: 13px;
+        padding: 4px 8px;
         top: 5px;
       }
       
       #musicToggle, #audioStatus {
-        font-size: 10px;
-        padding: 6px 10px;
+        font-size: 9px;
+        padding: 5px 8px;
       }
       
       .flipper-btn {
         width: 40%;
+        max-width: 150px;
         height: 100px;
-        font-size: 16px;
+        font-size: 15px;
         bottom: 10px;
       }
       
       #mobileLeftFlipper {
-        left: 10px;
+        left: 5px;
       }
       
       #mobileRightFlipper {
-        right: 10px;
+        right: 5px;
       }
       
       #mobileLaunchBtn {
         width: 80px;
         height: 80px;
         font-size: 12px;
-        bottom: 10px;
-        right: 10px;
+        bottom: 120px;
       }
       
       .modal-content h2 {
@@ -403,6 +424,11 @@
         font-size: 13px;
         padding: 10px 15px;
         width: 100%;
+        max-width: 250px;
+      }
+      
+      #adVideo {
+        max-height: 50%;
       }
     }
     
@@ -489,8 +515,16 @@
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    
+    // Set canvas to full viewport size
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+    }
+    
+    resizeCanvas();
     
     // Audio elements
     const backgroundMusic = document.getElementById('backgroundMusic');
@@ -517,60 +551,81 @@
     const bounceDamping = 0.7;
     const maxSpeed = 25; // Maximum ball speed to prevent tunneling
     
-    // Define the playfield boundaries - MORE RESTRICTIVE
-    const boundaries = {
-      left: 100,
-      right: canvas.width - 150,
-      top: 20,
-      bottom: canvas.height - 50,
-      flipperY: canvas.height - 100
-    };
+    // Define the playfield boundaries - PERCENTAGE BASED for mobile
+    function calculateBoundaries() {
+      return {
+        left: canvas.width * 0.08,
+        right: canvas.width * 0.92,
+        top: canvas.height * 0.02,
+        bottom: canvas.height * 0.95,
+        flipperY: canvas.height * 0.88
+      };
+    }
     
-    // Create solid boundary walls - CRITICAL for keeping ball inside
-    const walls = [
-      // Left vertical wall (solid from top to angled section)
-      { x1: boundaries.left, y1: 0, x2: boundaries.left, y2: canvas.height - 200, type: 'vertical' },
-      // Right vertical wall (solid from top to angled section)
-      { x1: boundaries.right, y1: 0, x2: boundaries.right, y2: canvas.height - 200, type: 'vertical' },
-      // Top wall
-      { x1: boundaries.left, y1: boundaries.top, x2: boundaries.right, y2: boundaries.top, type: 'horizontal' },
-      // Bottom left angled wall (from left wall to left flipper area)
-      { x1: boundaries.left, y1: canvas.height - 200, x2: canvas.width * 0.35, y2: boundaries.bottom, type: 'angled' },
-      // Bottom right angled wall (from right wall to right flipper area)
-      { x1: boundaries.right, y1: canvas.height - 200, x2: canvas.width * 0.65, y2: boundaries.bottom, type: 'angled' }
-    ];
+    let boundaries = calculateBoundaries();
     
-    // Flippers
-    const flippers = {
-      left: { 
-        x: canvas.width * 0.37, 
-        y: boundaries.flipperY, 
-        angle: -0.4, 
-        width: 120, 
-        rotating: false, 
-        target: -0.4,
-        speed: 0
-      },
-      right: { 
-        x: canvas.width * 0.63, 
-        y: boundaries.flipperY, 
-        angle: 0.4, 
-        width: 120, 
-        rotating: false, 
-        target: 0.4,
-        speed: 0
-      }
-    };
+    // Create solid boundary walls - DYNAMIC
+    function createWalls() {
+      return [
+        // Left vertical wall
+        { x1: boundaries.left, y1: 0, x2: boundaries.left, y2: canvas.height * 0.75, type: 'vertical' },
+        // Right vertical wall
+        { x1: boundaries.right, y1: 0, x2: boundaries.right, y2: canvas.height * 0.75, type: 'vertical' },
+        // Top wall
+        { x1: boundaries.left, y1: boundaries.top, x2: boundaries.right, y2: boundaries.top, type: 'horizontal' },
+        // Bottom left angled wall
+        { x1: boundaries.left, y1: canvas.height * 0.75, x2: canvas.width * 0.35, y2: boundaries.bottom, type: 'angled' },
+        // Bottom right angled wall
+        { x1: boundaries.right, y1: canvas.height * 0.75, x2: canvas.width * 0.65, y2: boundaries.bottom, type: 'angled' }
+      ];
+    }
     
-    // Bumpers
-    const bumpers = [
-      { x: canvas.width * 0.25, y: canvas.height * 0.25, radius: 50, color: '#ff00ff', hit: false },
-      { x: canvas.width * 0.5, y: canvas.height * 0.15, radius: 50, color: '#00ffff', hit: false },
-      { x: canvas.width * 0.75, y: canvas.height * 0.25, radius: 50, color: '#ffff00', hit: false },
-      { x: canvas.width * 0.35, y: canvas.height * 0.45, radius: 45, color: '#ff0080', hit: false },
-      { x: canvas.width * 0.65, y: canvas.height * 0.45, radius: 45, color: '#00ff80', hit: false },
-      { x: canvas.width * 0.5, y: canvas.height * 0.55, radius: 40, color: '#ff00ff', hit: false }
-    ];
+    let walls = createWalls();
+    
+    // Flippers - DYNAMIC
+    function createFlippers() {
+      const flipperWidth = Math.min(120, canvas.width * 0.15);
+      return {
+        left: { 
+          x: canvas.width * 0.37, 
+          y: boundaries.flipperY, 
+          angle: -0.4, 
+          width: flipperWidth, 
+          rotating: false, 
+          target: -0.4,
+          speed: 0
+        },
+        right: { 
+          x: canvas.width * 0.63, 
+          y: boundaries.flipperY, 
+          angle: 0.4, 
+          width: flipperWidth, 
+          rotating: false, 
+          target: 0.4,
+          speed: 0
+        }
+      };
+    }
+    
+    let flippers = createFlippers();
+    
+    // Bumpers - DYNAMIC
+    function createBumpers() {
+      const baseRadius = Math.min(50, canvas.width * 0.06);
+      const smallRadius = Math.min(45, canvas.width * 0.055);
+      const tinyRadius = Math.min(40, canvas.width * 0.05);
+      
+      return [
+        { x: canvas.width * 0.25, y: canvas.height * 0.25, radius: baseRadius, color: '#ff00ff', hit: false },
+        { x: canvas.width * 0.5, y: canvas.height * 0.15, radius: baseRadius, color: '#00ffff', hit: false },
+        { x: canvas.width * 0.75, y: canvas.height * 0.25, radius: baseRadius, color: '#ffff00', hit: false },
+        { x: canvas.width * 0.35, y: canvas.height * 0.45, radius: smallRadius, color: '#ff0080', hit: false },
+        { x: canvas.width * 0.65, y: canvas.height * 0.45, radius: smallRadius, color: '#00ff80', hit: false },
+        { x: canvas.width * 0.5, y: canvas.height * 0.55, radius: tinyRadius, color: '#ff00ff', hit: false }
+      ];
+    }
+    
+    let bumpers = createBumpers();
     
     // Lasers
     const lasers = [];
@@ -1057,23 +1112,25 @@
     }
     
     function drawLauncher() {
-      const launcherX = boundaries.right + 30;
-      const launcherY = canvas.height - 200;
+      const launcherX = boundaries.right + (canvas.width * 0.03);
+      const launcherY = canvas.height * 0.7;
+      const launcherWidth = Math.min(40, canvas.width * 0.05);
+      const launcherHeight = canvas.height * 0.25;
       
       ctx.fillStyle = '#222';
-      ctx.fillRect(launcherX - 20, launcherY, 40, 200);
+      ctx.fillRect(launcherX - launcherWidth/2, launcherY, launcherWidth, launcherHeight);
       ctx.strokeStyle = '#0ff';
       ctx.lineWidth = 3;
-      ctx.strokeRect(launcherX - 20, launcherY, 40, 200);
+      ctx.strokeRect(launcherX - launcherWidth/2, launcherY, launcherWidth, launcherHeight);
       
       if (game.isCharging) {
-        const powerHeight = (game.launchPower / 100) * 200;
-        const gradient = ctx.createLinearGradient(0, launcherY + 200, 0, launcherY);
+        const powerHeight = (game.launchPower / 100) * launcherHeight;
+        const gradient = ctx.createLinearGradient(0, launcherY + launcherHeight, 0, launcherY);
         gradient.addColorStop(0, '#ff0000');
         gradient.addColorStop(0.5, '#ffff00');
         gradient.addColorStop(1, '#00ff00');
         ctx.fillStyle = gradient;
-        ctx.fillRect(launcherX - 20, launcherY + 200 - powerHeight, 40, powerHeight);
+        ctx.fillRect(launcherX - launcherWidth/2, launcherY + launcherHeight - powerHeight, launcherWidth, powerHeight);
       }
     }
     
@@ -1137,8 +1194,9 @@
       }
       
       if (game.isCharging && !game.gameActive && game.ballsLeft > 0 && game.launchPower > 0) {
-        const launcherX = boundaries.right + 30;
-        game.ball = new Ball(launcherX, canvas.height - 220);
+        const launcherX = boundaries.right + (canvas.width * 0.03);
+        const launcherY = canvas.height * 0.7;
+        game.ball = new Ball(launcherX, launcherY + 20);
         game.ball.vy = -(game.launchPower / 100) * 30 - 8;
         game.ball.vx = -6;
         game.gameActive = true;
@@ -1323,28 +1381,37 @@
     
     // Handle window resize for mobile orientation changes
     window.addEventListener('resize', () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      resizeCanvas();
       
-      // Update boundaries based on new canvas size
-      boundaries.right = canvas.width - 150;
-      boundaries.bottom = canvas.height - 50;
-      boundaries.flipperY = canvas.height - 100;
+      // Recalculate all dynamic elements
+      boundaries = calculateBoundaries();
+      walls = createWalls();
+      flippers = createFlippers();
+      bumpers = createBumpers();
       
-      // Update flipper positions
-      flippers.left.x = canvas.width * 0.37;
-      flippers.left.y = boundaries.flipperY;
-      flippers.right.x = canvas.width * 0.63;
-      flippers.right.y = boundaries.flipperY;
+      // Recreate stars for new canvas size
+      stars.length = 0;
+      for (let i = 0; i < 150; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          size: Math.random() * 2,
+          speed: Math.random() * 0.3 + 0.1
+        });
+      }
       
-      // Update wall positions
-      walls[1].x1 = boundaries.right;
-      walls[1].x2 = boundaries.right;
-      walls[2].x2 = canvas.width * 0.35;
-      walls[2].y2 = boundaries.bottom;
-      walls[3].x1 = boundaries.right;
-      walls[3].x2 = canvas.width * 0.65;
-      walls[3].y2 = boundaries.bottom;
+      // Recreate lasers for new canvas size
+      lasers.length = 0;
+      for (let i = 0; i < 6; i++) {
+        lasers.push({
+          x: 100 + Math.random() * (canvas.width - 200),
+          y: 50 + Math.random() * canvas.height * 0.5,
+          length: 150 + Math.random() * 150,
+          angle: Math.random() * Math.PI * 2,
+          speed: 0.008 + Math.random() * 0.015,
+          color: `hsl(${Math.random() * 360}, 100%, 50%)`
+        });
+      }
     });
     
     gameLoop();
