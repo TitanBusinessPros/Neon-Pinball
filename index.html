@@ -554,11 +554,11 @@
     // Define the playfield boundaries - PERCENTAGE BASED for mobile
     function calculateBoundaries() {
       return {
-        left: canvas.width * 0.08,
-        right: canvas.width * 0.92,
+        left: canvas.width * 0.06,
+        right: canvas.width * 0.94,
         top: canvas.height * 0.02,
         bottom: canvas.height * 0.95,
-        flipperY: canvas.height * 0.88
+        flipperY: canvas.height * 0.90
       };
     }
     
@@ -566,17 +566,21 @@
     
     // Create solid boundary walls - DYNAMIC
     function createWalls() {
+      const wallBottomY = canvas.height * 0.78;
+      const gapLeft = canvas.width * 0.30;
+      const gapRight = canvas.width * 0.70;
+      
       return [
         // Left vertical wall
-        { x1: boundaries.left, y1: 0, x2: boundaries.left, y2: canvas.height * 0.75, type: 'vertical' },
+        { x1: boundaries.left, y1: 0, x2: boundaries.left, y2: wallBottomY, type: 'vertical' },
         // Right vertical wall
-        { x1: boundaries.right, y1: 0, x2: boundaries.right, y2: canvas.height * 0.75, type: 'vertical' },
+        { x1: boundaries.right, y1: 0, x2: boundaries.right, y2: wallBottomY, type: 'vertical' },
         // Top wall
         { x1: boundaries.left, y1: boundaries.top, x2: boundaries.right, y2: boundaries.top, type: 'horizontal' },
-        // Bottom left angled wall
-        { x1: boundaries.left, y1: canvas.height * 0.75, x2: canvas.width * 0.35, y2: boundaries.bottom, type: 'angled' },
-        // Bottom right angled wall
-        { x1: boundaries.right, y1: canvas.height * 0.75, x2: canvas.width * 0.65, y2: boundaries.bottom, type: 'angled' }
+        // Bottom left angled wall - connects left wall to left flipper area
+        { x1: boundaries.left, y1: wallBottomY, x2: gapLeft, y2: boundaries.bottom, type: 'angled' },
+        // Bottom right angled wall - connects right wall to right flipper area
+        { x1: boundaries.right, y1: wallBottomY, x2: gapRight, y2: boundaries.bottom, type: 'angled' }
       ];
     }
     
@@ -584,24 +588,24 @@
     
     // Flippers - DYNAMIC
     function createFlippers() {
-      const flipperWidth = Math.min(120, canvas.width * 0.15);
+      const flipperWidth = Math.min(140, canvas.width * 0.18); // Slightly longer flippers
       return {
         left: { 
-          x: canvas.width * 0.37, 
+          x: canvas.width * 0.30, // Aligned with left gap edge
           y: boundaries.flipperY, 
-          angle: -0.4, 
+          angle: -0.3, // Flatter angle for better coverage
           width: flipperWidth, 
           rotating: false, 
-          target: -0.4,
+          target: -0.3,
           speed: 0
         },
         right: { 
-          x: canvas.width * 0.63, 
+          x: canvas.width * 0.70, // Aligned with right gap edge
           y: boundaries.flipperY, 
-          angle: 0.4, 
+          angle: 0.3, // Flatter angle for better coverage
           width: flipperWidth, 
           rotating: false, 
-          target: 0.4,
+          target: 0.3,
           speed: 0
         }
       };
@@ -893,10 +897,13 @@
         const cos = Math.cos(flipper.angle);
         const sin = Math.sin(flipper.angle);
         
-        const localX = (this.x - flipper.x) * cos + (this.y - flipper.y) * sin;
+        // Adjust for right flipper pivot point
+        const pivotOffsetX = flipper.x > canvas.width / 2 ? -flipper.width + 15 : -15;
+        
+        const localX = (this.x - flipper.x) * cos + (this.y - flipper.y) * sin - pivotOffsetX;
         const localY = -(this.x - flipper.x) * sin + (this.y - flipper.y) * cos;
         
-        if (localX > -20 && localX < flipper.width && Math.abs(localY) < 15 + this.radius) {
+        if (localX > 0 && localX < flipper.width && Math.abs(localY) < 15 + this.radius) {
           const basePower = 30;
           const speedBonus = Math.abs(flipper.speed) * 20;
           const power = basePower + speedBonus;
@@ -915,10 +922,10 @@
       }
       
       checkBallLoss() {
-        const middleGapLeft = canvas.width * 0.35;
-        const middleGapRight = canvas.width * 0.65;
+        const middleGapLeft = canvas.width * 0.30;
+        const middleGapRight = canvas.width * 0.70;
         
-        // Ball is lost if it's below the flippers and between the gap
+        // Ball is lost if it's below the flippers and between the gap (now 40% width instead of 30%)
         if (this.y > boundaries.bottom - 10 && 
             this.x > middleGapLeft && 
             this.x < middleGapRight) {
@@ -1088,7 +1095,7 @@
         if (flipper.rotating) {
           flipper.angle += (flipper.target - flipper.angle) * 0.4;
         } else {
-          const defaultAngle = flipper.x < canvas.width / 2 ? -0.4 : 0.4;
+          const defaultAngle = flipper.x < canvas.width / 2 ? -0.3 : 0.3;
           flipper.angle += (defaultAngle - flipper.angle) * 0.3;
         }
         
@@ -1101,10 +1108,21 @@
         ctx.shadowBlur = 20;
         ctx.shadowColor = '#ff00ff';
         ctx.fillStyle = '#ff00ff';
-        ctx.fillRect(-15, -12, flipper.width, 24);
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(-15, -12, flipper.width, 24);
+        
+        // Draw flipper - right flipper pivots from right edge
+        if (flipper.x > canvas.width / 2) {
+          // Right flipper - pivot at right edge
+          ctx.fillRect(-flipper.width + 15, -12, flipper.width, 24);
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(-flipper.width + 15, -12, flipper.width, 24);
+        } else {
+          // Left flipper - pivot at left edge
+          ctx.fillRect(-15, -12, flipper.width, 24);
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(-15, -12, flipper.width, 24);
+        }
         
         ctx.shadowBlur = 0;
         ctx.restore();
