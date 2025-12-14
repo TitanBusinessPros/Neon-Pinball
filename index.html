@@ -498,6 +498,7 @@
     <button id="launchBtn">LAUNCH (SPACE)</button>
     <button id="rightFlipper">RIGHT FLIPPER (D)</button>
     <button id="restartBtn">RESTART (R)</button>
+    <button id="clearSaveBtn">CLEAR SAVE</button>
   </div>
   
   <!-- Mobile Touch Controls -->
@@ -546,6 +547,40 @@
       levelThresholds: [5000, 10000, 20000, 40000, 80000, 160000, 320000, 640000, 1280000, 2560000],
       activeBalls: [] // Track multiple balls
     };
+    
+    // Load saved game from localStorage
+    function loadGame() {
+      try {
+        const saved = localStorage.getItem('neonPinballSave');
+        if (saved) {
+          const data = JSON.parse(saved);
+          game.score = data.score || 0;
+          game.ballsLeft = data.ballsLeft || 10;
+          game.currentLevel = data.currentLevel || 1;
+          console.log('Game loaded from save');
+        }
+      } catch (e) {
+        console.error('Error loading game:', e);
+      }
+    }
+    
+    // Save game to localStorage
+    function saveGame() {
+      try {
+        const saveData = {
+          score: game.score,
+          ballsLeft: game.ballsLeft,
+          currentLevel: game.currentLevel,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('neonPinballSave', JSON.stringify(saveData));
+      } catch (e) {
+        console.error('Error saving game:', e);
+      }
+    }
+    
+    // Auto-save every 5 seconds
+    setInterval(saveGame, 5000);
     
     // Color cycling based on level
     const levelColors = [
@@ -685,6 +720,7 @@
     // Show mobile launch button when needed
     function updateMobileLaunchButton() {
       const mobileLaunchBtn = document.getElementById('mobileLaunchBtn');
+      // Only show if we have balls left AND less than 3 active
       if (isMobile && game.ballsLeft > 0 && game.activeBalls.length < 3) {
         mobileLaunchBtn.style.display = 'flex';
       } else {
@@ -734,10 +770,12 @@
         if (game.score >= targetScore && game.currentLevel < game.maxLevel) {
           game.currentLevel++;
           bumpers = createBumpers(); // Update colors
+          saveGame(); // Save after level up
           updateUI();
           showLevelUpMessage();
         } else if (game.score >= game.levelThresholds[game.maxLevel - 1] && game.currentLevel === game.maxLevel) {
           // Won the game!
+          saveGame();
           setTimeout(() => {
             document.getElementById('winMessage').style.display = 'block';
           }, 1000);
@@ -964,14 +1002,13 @@
           
           // Only decrement balls left when a ball is lost
           game.ballsLeft--;
+          saveGame(); // Save immediately when ball is lost
           updateUI();
           
-          // Check if all balls are gone and no balls left
-          if (game.activeBalls.length === 0) {
+          // Check if game over: no balls left AND no active balls
+          if (game.ballsLeft <= 0 && game.activeBalls.length === 0) {
             game.gameActive = false;
-            if (game.ballsLeft === 0) {
-              showGameOver();
-            }
+            showGameOver();
           }
         }
       }
@@ -1232,18 +1269,21 @@
     let chargeInterval = null;
     
     function startCharging() {
-      if (game.ballsLeft > 0 && game.activeBalls.length < 3 && !game.isCharging) {
-        game.isCharging = true;
-        game.launchPower = 0;
-        chargeInterval = setInterval(() => {
-          game.launchPower = Math.min(100, game.launchPower + 2);
-          updateUI();
-        }, 30);
-        
-        // Start music on first launch
-        if (!game.musicStarted) {
-          startBackgroundMusic();
-        }
+      // CRITICAL: Cannot launch if no balls left OR already have 3 active balls
+      if (game.ballsLeft <= 0 || game.activeBalls.length >= 3 || game.isCharging) {
+        return;
+      }
+      
+      game.isCharging = true;
+      game.launchPower = 0;
+      chargeInterval = setInterval(() => {
+        game.launchPower = Math.min(100, game.launchPower + 2);
+        updateUI();
+      }, 30);
+      
+      // Start music on first launch
+      if (!game.musicStarted) {
+        startBackgroundMusic();
       }
     }
     
@@ -1253,6 +1293,7 @@
         chargeInterval = null;
       }
       
+      // CRITICAL: Only launch if we have balls left AND less than 3 active
       if (game.isCharging && game.ballsLeft > 0 && game.launchPower > 0 && game.activeBalls.length < 3) {
         const launcherX = boundaries.right + (canvas.width * 0.03);
         const launcherY = canvas.height * 0.7;
@@ -1261,6 +1302,7 @@
         newBall.vx = -6;
         game.activeBalls.push(newBall);
         game.gameActive = true;
+        saveGame(); // Save after launching
       }
       
       game.isCharging = false;
@@ -1316,6 +1358,7 @@
     
     function claimBallsFromAd() {
       game.ballsLeft += 10;
+      saveGame(); // Save after claiming balls
       updateUI();
       document.getElementById('adModal').classList.remove('show');
     }
@@ -1332,6 +1375,7 @@
       bumpers = createBumpers(); // Reset colors
       document.getElementById('winMessage').style.display = 'none';
       hideGameOver();
+      saveGame(); // Save the reset state
       updateUI();
     }
     
@@ -1358,6 +1402,11 @@
     });
     
     document.getElementById('restartBtn').addEventListener('click', restartGame);
+    
+    document.getElementById('clearSaveBtn').addEventListener('click', () => {
+      localStorage.removeItem('neonPinballSave');
+      alert('Save cleared! Refresh page to start fresh.');
+    });
     
     // Mobile touch controls
     const mobileLeftFlipper = document.getElementById('mobileLeftFlipper');
@@ -1440,6 +1489,11 @@
     });
     
     updateUI();
+    
+    // Load saved game
+    loadGame();
+    bumpers = createBumpers(); // Update bumper colors based on loaded level
+    updateUI(); // Update UI with loaded values
     
     // Handle window resize for mobile orientation changes
     window.addEventListener('resize', () => {
