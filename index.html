@@ -460,6 +460,7 @@
   <div id="ui">
     <div>SCORE: <span id="score">0</span></div>
     <div>BALLS: <span id="ballsLeft">10</span></div>
+    <div>ACTIVE: <span id="activeBalls">0</span>/3</div>
     <div>POWER: <span id="power">0</span>%</div>
   </div>
   
@@ -542,8 +543,27 @@
       musicStarted: false,
       currentLevel: 1,
       maxLevel: 10,
-      levelThresholds: [5000, 10000, 20000, 40000, 80000, 160000, 320000, 640000, 1280000, 2560000]
+      levelThresholds: [5000, 10000, 20000, 40000, 80000, 160000, 320000, 640000, 1280000, 2560000],
+      activeBalls: [] // Track multiple balls
     };
+    
+    // Color cycling based on level
+    const levelColors = [
+      { wall: '#0ff', bumper1: '#ff00ff', bumper2: '#00ffff', bumper3: '#ffff00', bumper4: '#ff0080', bumper5: '#00ff80' }, // Level 1
+      { wall: '#ff0080', bumper1: '#00ff00', bumper2: '#ff6600', bumper3: '#0080ff', bumper4: '#ff00ff', bumper5: '#ffff00' }, // Level 2
+      { wall: '#00ff00', bumper1: '#ff0000', bumper2: '#0000ff', bumper3: '#ff00ff', bumper4: '#00ffff', bumper5: '#ffff00' }, // Level 3
+      { wall: '#ffff00', bumper1: '#ff0080', bumper2: '#8000ff', bumper3: '#00ff80', bumper4: '#ff6600', bumper5: '#0080ff' }, // Level 4
+      { wall: '#ff6600', bumper1: '#0080ff', bumper2: '#ff00ff', bumper3: '#00ff00', bumper4: '#ffff00', bumper5: '#ff0080' }, // Level 5
+      { wall: '#8000ff', bumper1: '#00ffff', bumper2: '#ff6600', bumper3: '#00ff80', bumper4: '#ff00ff', bumper5: '#ffff00' }, // Level 6
+      { wall: '#00ffff', bumper1: '#ff0000', bumper2: '#00ff00', bumper3: '#0000ff', bumper4: '#ffff00', bumper5: '#ff00ff' }, // Level 7
+      { wall: '#ff00ff', bumper1: '#00ff80', bumper2: '#ff0080', bumper3: '#0080ff', bumper4: '#ffff00', bumper5: '#00ffff' }, // Level 8
+      { wall: '#00ff80', bumper1: '#ff6600', bumper2: '#8000ff', bumper3: '#00ffff', bumper4: '#ff00ff', bumper5: '#ffff00' }, // Level 9
+      { wall: '#ff0000', bumper1: '#00ff00', bumper2: '#0000ff', bumper3: '#ffff00', bumper4: '#ff00ff', bumper5: '#00ffff' }  // Level 10
+    ];
+    
+    function getCurrentColors() {
+      return levelColors[game.currentLevel - 1] || levelColors[0];
+    }
     
     // Physics - REDUCED for better control
     const gravity = 0.4;
@@ -618,14 +638,15 @@
       const baseRadius = Math.min(50, canvas.width * 0.06);
       const smallRadius = Math.min(45, canvas.width * 0.055);
       const tinyRadius = Math.min(40, canvas.width * 0.05);
+      const colors = getCurrentColors();
       
       return [
-        { x: canvas.width * 0.25, y: canvas.height * 0.25, radius: baseRadius, color: '#ff00ff', hit: false },
-        { x: canvas.width * 0.5, y: canvas.height * 0.15, radius: baseRadius, color: '#00ffff', hit: false },
-        { x: canvas.width * 0.75, y: canvas.height * 0.25, radius: baseRadius, color: '#ffff00', hit: false },
-        { x: canvas.width * 0.35, y: canvas.height * 0.45, radius: smallRadius, color: '#ff0080', hit: false },
-        { x: canvas.width * 0.65, y: canvas.height * 0.45, radius: smallRadius, color: '#00ff80', hit: false },
-        { x: canvas.width * 0.5, y: canvas.height * 0.55, radius: tinyRadius, color: '#ff00ff', hit: false }
+        { x: canvas.width * 0.25, y: canvas.height * 0.25, radius: baseRadius, color: colors.bumper1, hit: false },
+        { x: canvas.width * 0.5, y: canvas.height * 0.15, radius: baseRadius, color: colors.bumper2, hit: false },
+        { x: canvas.width * 0.75, y: canvas.height * 0.25, radius: baseRadius, color: colors.bumper3, hit: false },
+        { x: canvas.width * 0.35, y: canvas.height * 0.45, radius: smallRadius, color: colors.bumper4, hit: false },
+        { x: canvas.width * 0.65, y: canvas.height * 0.45, radius: smallRadius, color: colors.bumper5, hit: false },
+        { x: canvas.width * 0.5, y: canvas.height * 0.55, radius: tinyRadius, color: colors.bumper1, hit: false }
       ];
     }
     
@@ -664,7 +685,7 @@
     // Show mobile launch button when needed
     function updateMobileLaunchButton() {
       const mobileLaunchBtn = document.getElementById('mobileLaunchBtn');
-      if (isMobile && !game.gameActive && game.ballsLeft > 0) {
+      if (isMobile && game.ballsLeft > 0 && game.activeBalls.length < 3) {
         mobileLaunchBtn.style.display = 'flex';
       } else {
         mobileLaunchBtn.style.display = 'none';
@@ -712,6 +733,7 @@
         const targetScore = game.levelThresholds[game.currentLevel - 1];
         if (game.score >= targetScore && game.currentLevel < game.maxLevel) {
           game.currentLevel++;
+          bumpers = createBumpers(); // Update colors
           updateUI();
           showLevelUpMessage();
         } else if (game.score >= game.levelThresholds[game.maxLevel - 1] && game.currentLevel === game.maxLevel) {
@@ -762,6 +784,8 @@
         const stepVX = this.vx / steps;
         const stepVY = this.vy / steps;
         
+        const colors = getCurrentColors();
+        
         for (let step = 0; step < steps; step++) {
           this.x += stepVX;
           this.y += stepVY;
@@ -773,21 +797,21 @@
           if (this.x < boundaries.left + this.radius + thick) {
             this.x = boundaries.left + this.radius + thick;
             this.vx = Math.abs(this.vx) * bounceDamping;
-            createParticles(this.x, this.y, '#0ff');
+            createParticles(this.x, this.y, colors.wall);
           }
           
           // Right wall
           if (this.x > boundaries.right - this.radius - thick) {
             this.x = boundaries.right - this.radius - thick;
             this.vx = -Math.abs(this.vx) * bounceDamping;
-            createParticles(this.x, this.y, '#0ff');
+            createParticles(this.x, this.y, colors.wall);
           }
           
           // Top wall
           if (this.y < boundaries.top + this.radius + thick) {
             this.y = boundaries.top + this.radius + thick;
             this.vy = Math.abs(this.vy) * bounceDamping;
-            createParticles(this.x, this.y, '#0ff');
+            createParticles(this.x, this.y, colors.wall);
           }
           
           // Check angled walls
@@ -807,6 +831,7 @@
       }
       
       checkAngledWalls() {
+        const colors = getCurrentColors();
         // Only check the angled bottom walls (last 2 walls in array)
         for (let i = 3; i < walls.length; i++) {
           const wall = walls[i];
@@ -858,7 +883,7 @@
               this.vy -= 2 * dotProduct * normalY;
               this.vx *= bounceDamping;
               this.vy *= bounceDamping;
-              createParticles(closestX, closestY, '#0ff');
+              createParticles(closestX, closestY, colors.wall);
             }
           }
         }
@@ -930,12 +955,23 @@
             this.x > middleGapLeft && 
             this.x < middleGapRight) {
           this.active = false;
-          game.ball = null;
-          game.gameActive = false;
+          
+          // Remove this ball from active balls array
+          const index = game.activeBalls.indexOf(this);
+          if (index > -1) {
+            game.activeBalls.splice(index, 1);
+          }
+          
+          // Only decrement balls left when a ball is lost
           game.ballsLeft--;
           updateUI();
-          if (game.ballsLeft === 0) {
-            showGameOver();
+          
+          // Check if all balls are gone and no balls left
+          if (game.activeBalls.length === 0) {
+            game.gameActive = false;
+            if (game.ballsLeft === 0) {
+              showGameOver();
+            }
           }
         }
       }
@@ -1047,10 +1083,11 @@
     }
     
     function drawWalls() {
-      ctx.strokeStyle = '#0ff';
+      const colors = getCurrentColors();
+      ctx.strokeStyle = colors.wall;
       ctx.lineWidth = 8;
       ctx.shadowBlur = 15;
-      ctx.shadowColor = '#0ff';
+      ctx.shadowColor = colors.wall;
       walls.forEach(wall => {
         ctx.beginPath();
         ctx.moveTo(wall.x1, wall.y1);
@@ -1155,6 +1192,7 @@
     function updateUI() {
       document.getElementById('score').textContent = game.score;
       document.getElementById('ballsLeft').textContent = game.ballsLeft;
+      document.getElementById('activeBalls').textContent = game.activeBalls.length;
       document.getElementById('power').textContent = Math.floor(game.launchPower);
       document.getElementById('currentLevel').textContent = game.currentLevel;
       updateMobileLaunchButton();
@@ -1171,10 +1209,14 @@
         drawFlippers();
         drawLauncher();
         
-        if (game.ball && game.ball.active && typeof game.ball.update === 'function') {
-          game.ball.update();
-          if (game.ball && game.ball.active && typeof game.ball.draw === 'function') {
-            game.ball.draw();
+        // Update and draw all active balls
+        for (let i = game.activeBalls.length - 1; i >= 0; i--) {
+          const ball = game.activeBalls[i];
+          if (ball && ball.active && typeof ball.update === 'function') {
+            ball.update();
+            if (ball && ball.active && typeof ball.draw === 'function') {
+              ball.draw();
+            }
           }
         }
         
@@ -1190,7 +1232,7 @@
     let chargeInterval = null;
     
     function startCharging() {
-      if (!game.gameActive && game.ballsLeft > 0 && !game.isCharging) {
+      if (game.ballsLeft > 0 && game.activeBalls.length < 3 && !game.isCharging) {
         game.isCharging = true;
         game.launchPower = 0;
         chargeInterval = setInterval(() => {
@@ -1211,12 +1253,13 @@
         chargeInterval = null;
       }
       
-      if (game.isCharging && !game.gameActive && game.ballsLeft > 0 && game.launchPower > 0) {
+      if (game.isCharging && game.ballsLeft > 0 && game.launchPower > 0 && game.activeBalls.length < 3) {
         const launcherX = boundaries.right + (canvas.width * 0.03);
         const launcherY = canvas.height * 0.7;
-        game.ball = new Ball(launcherX, launcherY + 20);
-        game.ball.vy = -(game.launchPower / 100) * 30 - 8;
-        game.ball.vx = -6;
+        const newBall = new Ball(launcherX, launcherY + 20);
+        newBall.vy = -(game.launchPower / 100) * 30 - 8;
+        newBall.vx = -6;
+        game.activeBalls.push(newBall);
         game.gameActive = true;
       }
       
@@ -1283,9 +1326,10 @@
       game.launchPower = 0;
       game.isCharging = false;
       game.gameActive = false;
-      game.ball = null;
+      game.activeBalls = [];
       game.currentLevel = 1;
       particles.length = 0;
+      bumpers = createBumpers(); // Reset colors
       document.getElementById('winMessage').style.display = 'none';
       hideGameOver();
       updateUI();
